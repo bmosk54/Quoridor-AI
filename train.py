@@ -1,39 +1,35 @@
-
-#
-# quoridor.py
-#
-# @author    Alain Rinder
-# @date      2017.06.01 - 2019-09-01
-# @version   0.1
-# @note      Python version: 3.6.1 [recommended] - 3.5.0 [minimal: https://docs.python.org/3/library/typing.html]
-#
-# TODO:
-# OK Use GridCoordinates class instead of col/row
-# OK Param graphical interface (disable draw functions...)
-# OK Split source files
-# OK Handle exec params
-# OK Check if fence placing will not block a player
-# OK Create algorithms for path finding
-# OK BuilderBot: maximise other pawns path
-# OK PERFORMANCE ISSUES: store valid fence placings, valid pawn moves with updates
-# OK Check blocking fence using path without pawns (one path could exist but cannot be currently accessible because of a pawn) (DFS)
-# OK Blocking fence checking failed on testing path with the future fence -> update valid pawn moves when appending fence in method isFencePlacingBlocking
-#    Create a bot combining BuilderBot & RunnerBot (run if path is shorter)
-# OK Fix path bug (sometimes consider a player as blocked, but paths still exist)
-
+from src.player.MCTS_Bot import *
+from src.player.MCTS_Bot import MCTS_Bot as Mcts_bot
+#from src.QuoridorGame import QuoridorGame as Game
+from src.Game import *
+from src.player.mcts.NNet import NNetWrapper as nn
+from utils import *
 import getopt
+PARAMETERS_ERROR_RETURN_CODE = 1
 
 from src.Settings              import *
-from src.Game                  import *
 from src.player.Human          import *
 from src.player.RandomBot      import *
 from src.player.RunnerBot      import *
 from src.player.BuilderBot     import *
 from src.player.BuildAndRunBot import *
-from src.player.MCTS_Bot       import *
 
+args = dotdict({
+    'numIters': 10, #1000
+    'numEps': 50, #100
+    'tempThreshold': 15,
+    'updateThreshold': 0.55,
+    'maxlenOfQueue': 200000,
+    'numMCTSSims': 50,
+    'arenaCompare': 40,
+    'cpuct': 1,
 
-PARAMETERS_ERROR_RETURN_CODE = 1
+    'checkpoint': './temp/',
+    'load_model': False,
+    'load_folder_file': ('./temp','5x5best.pth.tar'),
+    'numItersForTrainExamplesHistory': 20,
+})
+
 
 def printUsage():
     print("Usage: python quoridor.py [{-h|--help}] {-p|--players=}<PlayerName:PlayerType,...> [{-r|--rounds=}<roundCount>] [{-x|--cols=}<ColCount>] [{-y|--rows=}<RowCount>] [{-f|--fences=}<TotalFenceCount>] [{s|--square_size=}<SquareSizeInPixels>]")
@@ -81,20 +77,19 @@ def readArguments():
             sys.exit(PARAMETERS_ERROR_RETURN_CODE)
     return players, rounds, cols, rows, totalFenceCount, squareSize
 
-def main():
-    """
-    Main function of quoridor.
-    Create a game instance and launch game rounds.
-    """
+if __name__=="__main__":
+    #g = Game(5)
     players, rounds, cols, rows, totalFenceCount, squareSize = readArguments()
-
+    #players = [MCTS_Bot, MCTS_Bot]
     game = Game(players, cols, rows, totalFenceCount, squareSize)
-    game.start(rounds)
-    game.end()
+    
+    nnet = nn(game)
 
-    global TRACE
-    print("TRACE")
-    for i in TRACE:
-    	print("%s: %s" % (i, TRACE[i]))
+    if args.load_model:
+        nnet.load_checkpoint(args.load_folder_file[0], args.load_folder_file[1])
 
-main()
+    c = Mcts_bot(game, nnet, args)
+    if args.load_model:
+        print("Load trainExamples from file")
+        c.loadTrainExamples()
+    c.train_mcts()

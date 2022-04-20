@@ -23,22 +23,52 @@ from src.exception.PlayerPathObstructedException import *
 
 
 class Board(IDrawable):
-    def __init__(self, game, cols, rows, squareSize, innerSize):
-        self.game = game
-        self.cols,       self.rows      = cols,       rows
+    def __init__(self, game=None, cols=0, rows=0, squareSize=0, innerSize=0, board=None):
+        if not board:
+            self.game = game
+            self.cols,       self.rows      = cols,       rows
+            self.squareSize, self.innerSize = squareSize, innerSize
+            self.grid = [[Square(self, GridCoordinates(col, row)) for row in range(rows)] for col in range(cols)]
+            self.width, self.height = squareSize*cols + innerSize*(cols - 1), squareSize*rows + innerSize*(rows - 1)
+            if INTERFACE:
+                self.window = GraphWin("Quoridor", self.width, self.height)
+            self.pawns  = []
+            self.pawn_0 = None
+            self.pawn_1 = None
+            self.fences = []
+            self.firstCol  = 0
+            self.middleCol = int((self.cols - 1)/2)
+            self.lastCol   = self.cols - 1
+            self.firstRow  = 0
+            self.middleRow = int((self.rows - 1)/2)
+            self.lastRow   = self.rows - 1
+        else:
+            self.copy_constructor(board)
+
+    def copy_constructor(self, board):
+        cols = board.cols
+        rows = board.rows
+        squareSize, innerSize = board.squareSize, board.innerSize
+        self.cols, self.rows = cols, rows
         self.squareSize, self.innerSize = squareSize, innerSize
         self.grid = [[Square(self, GridCoordinates(col, row)) for row in range(rows)] for col in range(cols)]
         self.width, self.height = squareSize*cols + innerSize*(cols - 1), squareSize*rows + innerSize*(rows - 1)
         if INTERFACE:
             self.window = GraphWin("Quoridor", self.width, self.height)
-        self.pawns  = []
-        self.fences = []
+        self.pawns  = board.pawns
+        self.pawn_0 = board.pawn_0
+        self.pawn_1 = board.pawn_1
+        self.fences = board.fences
         self.firstCol  = 0
         self.middleCol = int((self.cols - 1)/2)
         self.lastCol   = self.cols - 1
         self.firstRow  = 0
         self.middleRow = int((self.rows - 1)/2)
         self.lastRow   = self.rows - 1
+        self.storedValidFencePlacings = board.storedValidFencePlacings
+        self.storedValidPawnMoves = board.storedValidPawnMoves
+        self.storedValidPawnMovesIgnoringPawns = board.storedValidPawnMovesIgnoringPawns
+
 
     def initStoredValidActions(self):
         self.storedValidFencePlacings, self.storedValidPawnMoves, self.storedValidPawnMovesIgnoringPawns = [], {}, {}
@@ -460,7 +490,37 @@ class Board(IDrawable):
         self.updateStoredValidFencePlacingsAfterFencePlacing(coord, direction)
         self.updateStoredValidPawnMovesAfterFencePlacing(coord, direction)
         self.updateStoredValidPawnMovesIgnoringPawnsAfterFencePlacing(coord, direction)
-
+    
+    def to_string(self):
+         # top edge
+        board = ""
+        board += "." + "-+"*(self.cols - 1) + "-." + "\n"
+        # first row
+        coord = GridCoordinates(0, 0)
+        pawn = self.getPawnAt(coord)
+        board += "|%s" % (" " if pawn is None else pawn.player.name[:1]) + ""
+        for col in range(1, self.cols):
+            coord = GridCoordinates(col, 0)
+            pawn = self.getPawnAt(coord)
+            board += "%s%s" % (" " if not self.hasFenceAtLeft(coord) else "|", " " if pawn is None else pawn.player.name[:1]) + ""
+        board += "|" + "\n"
+        for row in range(1, self.rows):
+            board += "+" + ""
+            for col in range(self.cols):
+                coord = GridCoordinates(col, row)
+                board += "%s+" % (" " if not self.hasFenceAtTop(coord) else "-") + ""
+            board += "" + "\n"
+            coord = GridCoordinates(0, row)
+            pawn = self.getPawnAt(coord)
+            board += "|%s" % (" " if pawn is None else pawn.player.name[:1]) + ""
+            for col in range(1, self.cols):
+                coord = GridCoordinates(col, row)
+                pawn = self.getPawnAt(coord)
+                board += "%s%s" % (" " if not self.hasFenceAtLeft(coord) else "|", " " if pawn is None else pawn.player.name[:1]) + ""
+            board += "|" + "\n"
+        # bottom edge
+        board += "'" + "-+"*(self.cols - 1) + "-'" +"\n"
+    
     def drawOnConsole(self):
         # top edge
         print("." + "-+"*(self.cols - 1) + "-.")
