@@ -63,7 +63,7 @@ class MCTS:
         if counter == 0:
             self.sH = {}
         s = self.game.stringRepresentation(canonicalBoard)
-
+        
         if s not in self.Es:
             self.Es[s] = self.game.getGameEnded(canonicalBoard, 1)
         if self.Es[s]!=0:
@@ -71,7 +71,7 @@ class MCTS:
             return -self.Es[s]
         if s not in self.Ps:
             # leaf node
-            self.Ps[s], v = self.nnet.predict(canonicalBoard)
+            self.Ps[s], v = self.nnet.predict(self.game.getTensorForm(canonicalBoard))
             valids = self.game.getValidMoves(canonicalBoard, 1)
             self.Ps[s] = self.Ps[s]*valids      # masking invalid moves
             sum_Ps_s = np.sum(self.Ps[s])

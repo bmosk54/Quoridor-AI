@@ -8,8 +8,8 @@ import math
 import sys
 #sys.path.append('../../')
 from utils import *
-from src.player.mcts.pytorch_classification.utils import Bar, AverageMeter
-from src.player.mcts.NeuralNet import NeuralNet
+from src.player.tree.pytorch_classification.utils import Bar, AverageMeter
+from src.player.tree.NeuralNet import NeuralNet
 
 import argparse
 import torch
@@ -19,7 +19,7 @@ import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.autograd import Variable
 
-from src.player.mcts.QuoridorNNet import QuoridorNNet as qnnet
+from src.player.tree.QuoridorNNet import QuoridorNNet as qnnet
 
 args = dotdict({
     'lr': 0.001,
@@ -122,6 +122,7 @@ class NNetWrapper(NeuralNet):
         start = time.time()
 
         # preparing input
+       # board = torch.FloatTensor(board)
         board = torch.FloatTensor(board.astype(np.uint8))
         if args.cuda: board = board.contiguous().cuda()
         #board = Variable(board, volatile=True)

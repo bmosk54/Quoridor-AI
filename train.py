@@ -1,8 +1,9 @@
-from src.player.MCTS_Bot import *
-from src.player.MCTS_Bot import MCTS_Bot as Mcts_bot
+#from src.player.MCTS_Bot import *
+from Coach import Coach
+#from src.player.MCTS_Bot import MCTS_Bot as Mcts_bot
 #from src.QuoridorGame import QuoridorGame as Game
 from src.Game import *
-from src.player.mcts.NNet import NNetWrapper as nn
+from src.player.tree.NNet import NNetWrapper as nn
 from utils import *
 import getopt
 PARAMETERS_ERROR_RETURN_CODE = 1
@@ -88,7 +89,7 @@ if __name__=="__main__":
     if args.load_model:
         nnet.load_checkpoint(args.load_folder_file[0], args.load_folder_file[1])
 
-    c = Mcts_bot(game, nnet, args)
+    c = Coach(game, nnet, args)
     if args.load_model:
         print("Load trainExamples from file")
         c.loadTrainExamples()

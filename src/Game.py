@@ -9,18 +9,22 @@
 from pdb import runeval
 import random
 #from player.BuildAndRunBot import BuildAndRunBot
-
+from src.player.BuildAndRunBot import BuildAndRunBot
+from src.player.MCTS_Bot import MCTS_Bot
 from src.Settings            import *
 from src.interface.Color     import *
 from src.interface.Board     import *
 from src.interface.Pawn      import *
-from src.player.Human        import *
-from src.player.BuildAndRunBot import *
+#from src.player.Human        import *
+#from src.player.BuildAndRunBot import *
 from src.action.PawnMove     import *
 from src.action.FencePlacing import *
 from src.Path                import *
 #from src.player.MCTS_Bot    import *
-from src.player import MCTS_Bot
+#from src.player.MCTS_Bot import *
+import torch
+import numpy as np
+#from src.player.MCTS_Bot import MCTS_Bot as Mcts
 
 
 
@@ -153,26 +157,38 @@ class Game:
             startBoard: a representation of the board (ideally this is the form
                         that will be the input to your neural network)
         """
-        board = Board(self.board)
+        #mcts_bot = MCTS_Bot.MCTS_Bot()
+        board = self.board
         board.pawn_0 = Pawn(board, MCTS_Bot)
         board.pawn_1 = Pawn(board, MCTS_Bot)
+        print("111: " + str(board.cols))
+        board.initStoredValidActions()
         self.placePawnSim(board.startPosition(0), board, board.pawn_0, ind=0)
         self.placePawnSim(board.startPosition(1), board, board.pawn_1, ind=1)
         #self.placePawnSim(self.players[0].startPosition(0), board, self.players[0].pawn, ind=0)
         #self.placePawnSim(self.players[1].startPosition(1), board, self.players[1].pawn, ind=1)
-        board.initStoredValidActions()
-        #playerCount = len(self.players)
-        playerCount = 2
-        playerFenceCount = int(self.totalFenceCount/playerCount)
-        for i in range(2):
-            if(i==0):
+        
+       # playerCount = 2
+        #print("LEN: " + str(len(self.players)))
+       # playerFenceCount = int(self.totalFenceCount/playerCount)
+        #for i in range(playerCount):
+           # player = board.players[i]
+            # Place player pawn at start position and add fences to player stock
+           # for j in range(playerFenceCount):
+                #player.fences.append(Fence(self.board, player))
+       # playerCount = 2
+       # playerFenceCount = int(self.totalFenceCount/playerCount)
+        #for i in range(2):
+          #  if(i==0):
                 #player = self.players[0]
-                player = board.pawn_0.player
-            else:
+            #    player = board.pawn_0.player
+          #  else:
                # player = self.players[1]
-                player = board.pawn_1.player
-            for j in range(playerFenceCount):
-                player.fences.append(Fence(board, player ))
+              #  player = board.pawn_1.player
+         #   for j in range(playerFenceCount):
+             #   player.fences.append(Fence(board, player ))
+        #playerCount = len(self.players)
+        
         return board
        
     def getBoardSize(self):
@@ -218,11 +234,13 @@ class Game:
                 self.placePawnSim(action.toCoord, board, board.pawn_0)
             else:
                 self.placeFenceSim(action.coord, action.direction, board)
+            return board, 1
         else:
             if isinstance(action, PawnMove):
                 self.placePawnSim(action.toCoord, board, board.pawn_1)
             else:
                 self.placeFenceSim(action.coord, action.direction, board)
+            return board, 0
 
     def getValidMoves(self, board, player):
         """
@@ -252,18 +270,19 @@ class Game:
                small non-zero value for draw.
                
         """
-        
+        print("CHRIOS: " + str(board.pawn_0.player))
         if(player==0):
-            if(board.pawn_0.player.hasWon()):
+            if(board.pawn_0.player().hasWon()):
                 return 1
-            elif(board.pawn_1.player.hasWon()):
+            elif(board.pawn_1.player().hasWon()):
                 return -1
             else:
                 return 0
         if(player==1):
-            if(board.pawn_1.player.hasWon()):
+            print("JUST: " + str(board.pawn_1.player))
+            if(board.pawn_1.player().hasWon()):
                 return 1
-            elif(board.pawn_0.player.hasWon()):
+            elif(board.pawn_0.player().hasWon()):
                 return -1
             else:
                 return 0
@@ -281,12 +300,35 @@ class Game:
                             board as is. When the player is black, we can invert
                             the colors and return the board.
         """
-        #pass
+        print("1: " + str(board.pawn_0.coord) )
         return board
+        return [[board.pawn_0.coord.col, board.pawn_0.coord.row],
+                            [board.pawn_1.coord.col, board.pawn_1.coord.row],
+                            board.fences]
+       # torch.tensor([[board.pawn_0.coord.col, board.pawn_0.coord.row],
+                           # [board.pawn_1.coord.col, board.pawn_1.coord.row],
+                           # board.fences])
+        #pass
+        
        # if(player==-1):
        #     return board
        # if(player==1):
         #    return board
+
+    def getTensorForm(self, board):
+        def pad_to_dense(M):
+            """Appends the minimal required amount of zeroes at the end of each 
+        array in the jagged array `M`, such that `M` looses its jagedness."""
+
+            maxlen = max(len(r) for r in M)
+            Z = np.zeros((len(M), maxlen))
+            for enu, row in enumerate(M):
+                Z[enu, :len(row)] += row 
+            return Z
+        
+        return pad_to_dense([[board.pawn_0.coord.col, board.pawn_0.coord.row],
+                            [board.pawn_1.coord.col, board.pawn_1.coord.row],
+                            board.fences])
 
     def getSymmetries(self, board, pi):
         """
@@ -309,4 +351,7 @@ class Game:
                          Required by MCTS for hashing.
         """
         #pass
-        return board.to_string()
+        return str(board.pawn_0.coord) + ';'+ str(board.pawn_1.coord) + ';' + ''.join(board.fences)
+       # return ''.join([[board.pawn_0.coord],
+               #[board.pawn_1.coord],
+               # board.fences])
