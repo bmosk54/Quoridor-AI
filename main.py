@@ -31,7 +31,7 @@ from src.player.RunnerBot      import *
 from src.player.BuilderBot     import *
 from src.player.BuildAndRunBot import *
 from src.player.MCTS_Bot       import *
-
+from src.player.MinimaxBot     import *
 
 PARAMETERS_ERROR_RETURN_CODE = 1
 

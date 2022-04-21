@@ -576,3 +576,29 @@ class Board(IDrawable):
         self.fences.pop()
         self.updateStoredValidPawnMovesIgnoringPawnsAfterFencePlacing(fencePlacing.coord, fencePlacing.direction)
         return impact
+
+    def getFencePlacingImpactOnPathsPawn(self, fencePlacing: FencePlacing, pawns, inds):
+        global TRACE
+        TRACE["Board.getFencePlacingImpactOnPaths"] += 1
+        stateBefore = {}
+        for i, pawn in enumerate(pawns):
+            path = Path.BreadthFirstSearch(self, pawn.coord, self.endPositions(inds[i]), ignorePawns = True)
+            if path is None:
+                print("Player %s index is already blocked!" % (inds[i]))
+                return None
+            stateBefore[pawn] = len(path.moves)
+        fence = Fence(self, None)
+        fence.coord, fence.direction = fencePlacing.coord, fencePlacing.direction
+        self.fences.append(fence)
+        self.updateStoredValidPawnMovesIgnoringPawnsAfterFencePlacing(fencePlacing.coord, fencePlacing.direction)
+        impact = {}
+        for i, pawn in enumerate(pawns):
+            path = Path.BreadthFirstSearch(self, pawn.coord, self.endPositions(inds[i]), ignorePawns = True)
+            if path is None:
+                self.fences.pop()
+                self.updateStoredValidPawnMovesIgnoringPawnsAfterFencePlacing(fencePlacing.coord, fencePlacing.direction)
+                raise PlayerPathObstructedException(pawn, fencePlacing)
+            impact[pawn] = len(path.moves) - stateBefore[pawn]
+        self.fences.pop()
+        self.updateStoredValidPawnMovesIgnoringPawnsAfterFencePlacing(fencePlacing.coord, fencePlacing.direction)
+        return impact
